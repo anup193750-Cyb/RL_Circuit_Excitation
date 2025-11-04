@@ -1,193 +1,179 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⚡ RL Circuit V–I Characteristics | AC Excitation Simulator</title>
-  <meta name="description" content="Interactive RL circuit simulator to visualize voltage–current characteristics for AC excitation using V(t)=Vm·cos(ωt).">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>⚡ RL Circuit V–I Characteristics | AC Excitation</title>
   <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <style>
     body {
       font-family: "Segoe UI", Roboto, sans-serif;
-      background: #f8fafc;
-      color: #222;
+      background-color: #0d1117;
+      color: #e6edf3;
       margin: 0;
-      padding: 20px;
+      padding: 0;
     }
+
     header {
       text-align: center;
-      margin-bottom: 20px;
+      background: #161b22;
+      color: #58a6ff;
+      padding: 15px 0;
+      font-size: 1.5rem;
+      border-bottom: 1px solid #30363d;
+      letter-spacing: 0.5px;
     }
-    h1 {
-      color: #0047ab;
-      margin-bottom: 6px;
-    }
-    p {
-      font-size: 0.95rem;
-      color: #333;
-    }
+
     .controls {
       display: flex;
       flex-wrap: wrap;
+      justify-content: center;
       gap: 20px;
-      justify-content: center;
-      margin: 20px 0;
-      background: #eef4ff;
-      padding: 15px;
-      border-radius: 10px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      margin: 20px auto;
+      max-width: 900px;
+      background: #161b22;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 10px rgba(88,166,255,0.2);
     }
+
     .control {
-      flex: 1 1 300px;
-    }
-    .label {
-      display: block;
-      font-weight: 600;
-      margin-bottom: 5px;
-    }
-    input[type="range"] {
-      width: 100%;
-    }
-    #plots {
       display: flex;
-      flex-wrap: wrap;
-      gap: 25px;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
+      width: 180px;
+      color: #c9d1d9;
     }
-    #plots > div {
-      flex: 1 1 500px;
-      min-width: 300px;
+
+    input[type=range] {
+      width: 100%;
+      accent-color: #58a6ff;
     }
-    #info {
-      background: #f0f9ff;
-      border-left: 6px solid #0284c7;
-      padding: 15px 20px;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 800px;
-      margin: 25px auto;
+
+    #plots {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1200px;
+      margin: auto;
     }
-    footer {
-      text-align: center;
-      margin-top: 30px;
-      font-size: 0.85rem;
-      color: #666;
+
+    .plot {
+      background: #161b22;
+      border-radius: 12px;
+      padding: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.4);
+    }
+
+    @media (max-width: 800px) {
+      #plots { grid-template-columns: 1fr; }
     }
   </style>
 </head>
 <body>
+  <header>⚡ RL Circuit V–I Characteristics (V = Vm cos ωt)</header>
 
-<header>
-  <h1>⚡ RL Circuit Simulator — V–I Characteristics (AC Excitation)</h1>
-  <p>Visualize voltage and current phase relation in an RL circuit driven by <b>V(t) = Vₘ·cos(ωt)</b>.</p>
-</header>
-
-<div class="controls">
-  <div class="control">
-    <span class="label">Voltage Amplitude (Vₘ): <span id="Vm_val">10</span> V</span>
-    <input type="range" id="Vm" min="1" max="100" value="10" step="1">
+  <div class="controls">
+    <div class="control">
+      <label>Resistance R (Ω): <span id="rVal">100</span></label>
+      <input type="range" id="R" min="0" max="1000" value="100" step="10">
+    </div>
+    <div class="control">
+      <label>Inductance L (H): <span id="lVal">0.1</span></label>
+      <input type="range" id="L" min="0.001" max="1" value="0.1" step="0.001">
+    </div>
+    <div class="control">
+      <label>Frequency f (Hz): <span id="fVal">50</span></label>
+      <input type="range" id="f" min="10" max="3000" value="50" step="10">
+    </div>
+    <div class="control">
+      <label>Amplitude Vm (V): <span id="vVal">10</span></label>
+      <input type="range" id="Vm" min="1" max="200" value="10" step="1">
+    </div>
   </div>
 
-  <div class="control">
-    <span class="label">Frequency (Hz): <span id="f_val">50</span></span>
-    <input type="range" id="f" min="10" max="1000" value="50" step="10">
+  <div id="plots">
+    <div id="vtPlot" class="plot"></div>
+    <div id="viPlot" class="plot"></div>
   </div>
 
-  <div class="control">
-    <span class="label">Resistance (R): <span id="R_val">10</span> Ω</span>
-    <input type="range" id="R" min="1" max="100" value="10" step="1">
-  </div>
+  <script>
+    const Rslider = document.getElementById("R");
+    const Lslider = document.getElementById("L");
+    const fslider = document.getElementById("f");
+    const Vmslider = document.getElementById("Vm");
+    const rVal = document.getElementById("rVal");
+    const lVal = document.getElementById("lVal");
+    const fVal = document.getElementById("fVal");
+    const vVal = document.getElementById("vVal");
 
-  <div class="control">
-    <span class="label">Inductance (L): <span id="L_val">0.1</span> H</span>
-    <input type="range" id="L" min="0.001" max="1" value="0.1" step="0.001">
-  </div>
-</div>
+    function updatePlots() {
+      const R = parseFloat(Rslider.value);
+      const L = parseFloat(Lslider.value);
+      const f = parseFloat(fslider.value);
+      const Vm = parseFloat(Vmslider.value);
 
-<div id="plots">
-  <div id="plot_time"></div>
-  <div id="plot_vi"></div>
-</div>
+      rVal.textContent = R.toFixed(0);
+      lVal.textContent = L.toFixed(3);
+      fVal.textContent = f.toFixed(0);
+      vVal.textContent = Vm.toFixed(0);
 
-<div id="info"></div>
+      const ω = 2 * Math.PI * f;
+      const t = Array.from({ length: 800 }, (_, i) => i / 2000);
+      const Z = Math.sqrt(R * R + (ω * L) ** 2);
+      const φ = Math.atan((ω * L) / (R === 0 ? 1e-9 : R));
 
-<footer>
-  <b>Experiment:</b> V–I Characteristics of RL Circuit |
-  <b>Created by:</b> EE24BT003 | <b>Roll No:</b> EE24BT015
-</footer>
+      const v = t.map(tt => Vm * Math.cos(ω * tt));
+      const i = t.map(tt => (Vm / Z) * Math.cos(ω * tt - φ));
 
-<script>
-const Vm_slider = document.getElementById("Vm");
-const f_slider = document.getElementById("f");
-const R_slider = document.getElementById("R");
-const L_slider = document.getElementById("L");
+      // --- Voltage & Current vs Time ---
+      Plotly.newPlot('vtPlot', [
+        {
+          x: t,
+          y: v,
+          name: 'Voltage (V)',
+          line: { color: '#00b4d8', width: 2 },
+          hovertemplate: 't = %{x:.4f}s<br>V = %{y:.2f} V<extra></extra>'
+        },
+        {
+          x: t,
+          y: i,
+          name: 'Current (A)',
+          line: { color: '#ffb703', width: 2 },
+          hovertemplate: 't = %{x:.4f}s<br>I = %{y:.3f} A<extra></extra>'
+        }
+      ], {
+        title: { text: 'Voltage and Current vs Time', font: { color: '#e6edf3' } },
+        paper_bgcolor: '#161b22',
+        plot_bgcolor: '#161b22',
+        xaxis: { title: 'Time (s)', color: '#e6edf3', gridcolor: '#30363d' },
+        yaxis: { title: 'Amplitude', color: '#e6edf3', gridcolor: '#30363d' },
+        legend: { font: { color: '#e6edf3' } },
+        hovermode: 'x unified'
+      });
 
-[Vm_slider, f_slider, R_slider, L_slider].forEach(sl => sl.addEventListener("input", update));
+      // --- V–I Lissajous curve ---
+      Plotly.newPlot('viPlot', [{
+        x: v,
+        y: i,
+        mode: 'lines',
+        line: { color: '#8b5cf6', width: 2 },
+        hovertemplate: 'V = %{x:.2f} V<br>I = %{y:.3f} A<extra></extra>'
+      }], {
+        title: { text: 'V–I Characteristic (Phase Relationship)', font: { color: '#e6edf3' } },
+        paper_bgcolor: '#161b22',
+        plot_bgcolor: '#161b22',
+        xaxis: { title: 'Voltage (V)', color: '#e6edf3', gridcolor: '#30363d' },
+        yaxis: { title: 'Current (A)', color: '#e6edf3', gridcolor: '#30363d' },
+        legend: { font: { color: '#e6edf3' } },
+        hovermode: 'closest'
+      });
+    }
 
-function update() {
-  const Vm = parseFloat(Vm_slider.value);
-  const f = parseFloat(f_slider.value);
-  const R = parseFloat(R_slider.value);
-  const L = parseFloat(L_slider.value);
-
-  document.getElementById("Vm_val").textContent = Vm;
-  document.getElementById("f_val").textContent = f;
-  document.getElementById("R_val").textContent = R;
-  document.getElementById("L_val").textContent = L.toFixed(3);
-
-  const ω = 2 * Math.PI * f;
-  const Z = Math.sqrt(R**2 + (ω*L)**2);
-  const φ = Math.atan2(ω*L, R);
-  const I_m = Vm / Z;
-
-  const t = Array.from({ length: 800 }, (_, i) => i * (1 / (100 * f)));
-  const v = t.map(tt => Vm * Math.cos(ω * tt));
-  const i = t.map(tt => I_m * Math.cos(ω * tt - φ));
-
-  // Plot 1: Voltage & Current vs Time
-  Plotly.newPlot("plot_time", [
-    { x: t, y: v, name: "Voltage (V)", line: { color: "#2563eb" } },
-    { x: t, y: i, name: "Current (A)", line: { color: "#dc2626" }, yaxis: "y2" }
-  ], {
-    title: "Voltage and Current vs Time",
-    xaxis: { title: "Time (s)" },
-    yaxis: { title: "Voltage (V)" },
-    yaxis2: { title: "Current (A)", overlaying: "y", side: "right" },
-    legend: { orientation: "h", x: 0.2, y: 1.1 }
-  }, {responsive: true});
-
-  // Plot 2: V–I Lissajous Curve
-  Plotly.newPlot("plot_vi", [{
-    x: v, y: i, mode: "lines",
-    line: { color: "#16a34a" },
-    name: "V–I Characteristic"
-  }], {
-    title: "V–I Characteristic (Lissajous Curve)",
-    xaxis: { title: "Voltage (V)" },
-    yaxis: { title: "Current (A)" },
-    aspectratio: { x: 1, y: 1 }
-  }, {responsive: true});
-
-  // Info section
-  const pf = Math.cos(φ).toFixed(3);
-  const τ = (R === 0 ? 0 : L / R).toFixed(4);
-  document.getElementById("info").innerHTML = `
-    <h3>📘 Circuit Parameters</h3>
-    <b>Impedance (Z):</b> ${Z.toFixed(2)} Ω<br>
-    <b>Phase Angle (φ):</b> ${(φ * 180 / Math.PI).toFixed(2)}°<br>
-    <b>Current Amplitude (Iₘ):</b> ${I_m.toFixed(3)} A<br>
-    <b>Power Factor:</b> ${pf}<br>
-    <b>Time Constant (τ = L/R):</b> ${τ} s
-    <hr>
-    <b>Formulas:</b><br>
-    V(t) = Vₘ·cos(ωt)<br>
-    I(t) = (Vₘ / Z)·cos(ωt − φ)<br>
-    Z = √(R² + (ωL)²), φ = tan⁻¹(ωL / R)
-  `;
-}
-
-update();
-</script>
-
+    [Rslider, Lslider, fslider, Vmslider].forEach(sl => sl.addEventListener("input", updatePlots));
+    updatePlots();
+  </script>
 </body>
 </html>
